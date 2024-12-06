@@ -1,8 +1,47 @@
+# services:
+#   mongo:
+#     image: mongo
+#     ports:
+#       - 3456:27017
+#     environment:
+#       MONGO_INITDB_ROOT_USERNAME: root
+#       MONGO_INITDB_ROOT_PASSWORD: example
+#       MONGO_INITDB_DATABASE: the_database
+#     volumes: 
+#       - ./mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+#       - ./mongo_data:/data/db
+
+#   redis:
+#     image: redis
+#     ports:
+#       - "6379:6379"
+#     command: ['redis-server', '--appendonly', 'yes'] # Sobrescribe el comando predeterminado para activar la persistencia AOF
+#     volumes:
+#       - ./redis_data:/data # Volumen para persistencia de datos
+
 services:
+  app:
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    image: backend-dev
+    container_name: backend-dev
+    ports:
+      - "3000:3000" # Mapea el puerto local con el puerto del contenedor
+    volumes:
+      - .:/usr/src/app # Monta el directorio de tu proyecto al contenedor
+      - /usr/src/app/node_modules # Ignora los node_modules en el host
+    environment:
+      MONGO_URI: "mongodb://root:example@mongo:27017/the_database" # Configuración de conexión a MongoDB
+      REDIS_URI: "redis://redis:6379" # Configuración de conexión a Redis
+    depends_on:
+      - mongo
+      - redis
+
   mongo:
     image: mongo
     ports:
-      - 3456:27017
+      - "3456:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
@@ -15,6 +54,6 @@ services:
     image: redis
     ports:
       - "6379:6379"
-    command: ['redis-server', '--appendonly', 'yes'] # Sobrescribe el comando predeterminado para activar la persistencia AOF
+    command: ['redis-server', '--appendonly', 'yes'] # Activar persistencia AOF
     volumes:
       - ./redis_data:/data # Volumen para persistencia de datos
