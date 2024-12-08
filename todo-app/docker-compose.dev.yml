@@ -1,0 +1,116 @@
+# services:
+#   # Frontend (React)
+#   todo-frontend:
+#     build:
+#       context: ./todo-frontend
+#       dockerfile: dev.Dockerfile
+#     volumes:
+#       - ./todo-frontend:/usr/src/app # Sincroniza el código de tu frontend con el contenedor
+#       - /usr/src/app/node_modules # Para evitar conflictos con node_modules
+#     ports:
+#       - 5173:5173 # Puerto del frontend
+#     container_name: todo-frontend
+#     networks:
+#       - todo-net
+#     depends_on:
+#       - todo-backend # Asegura que el backend esté disponible antes de iniciar el frontend
+  
+#   # Backend (Express)
+#   todo-backend:
+#     build:
+#       context: ./todo-backend
+#       dockerfile: dev.Dockerfile # Aquí asumiendo que tienes un Dockerfile para tu backend
+#     volumes:
+#       - ./todo-backend:/usr/src/app # Sincroniza el código del backend
+#     ports:
+#       - 3000:3000 # Puerto de la API backend
+#     container_name: todo-backend
+#     networks:
+#       - todo-net
+
+#   # Servidor Nginx (Proxy Inverso)
+#   nginx:
+#     image: nginx:1.20.1
+#     volumes:
+#       - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro # Configuración de Nginx
+#     ports:
+#       - 8080:80 # Exponer el servidor en el puerto 8080
+#     container_name: nginx-proxy
+#     depends_on:
+#       - todo-frontend
+#       - todo-backend
+#     networks:
+#       - todo-net
+
+# networks:
+#   todo-net:
+#     driver: bridge
+
+
+services:
+  frontend:
+    build:
+      context: ./todo-frontend
+      dockerfile: dev.Dockerfile
+    container_name: todo-frontend
+    volumes:
+      - ./todo-frontend:/usr/src/app
+      - /usr/src/app/node_modules  # Para evitar conflictos con node_modules
+    environment:
+      VITE_API_URL: "http://todo-backend:8080/api"  # Ruta para conectar el frontend con el backend
+    networks:
+      - todo-app
+
+  backend:
+    build:
+      context: ./todo-backend
+      dockerfile: dev.Dockerfile
+    container_name: todo-backend
+    volumes:
+      - ./todo-backend:/usr/src/app
+    environment:
+      MONGO_URI: "mongodb://root:example@mongo:27017/the_database"
+      REDIS_URI: "redis://redis:6379"
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - todo-app
+
+  mongo:
+    image: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: the_database
+    volumes:
+      - ./todo-backend/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+      - ./todo-backend/mongo_data:/data/db
+    networks:
+      - todo-app
+
+  redis:
+    image: redis
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - ./todo-backend/redis_data:/data
+    networks:
+      - todo-app
+
+  reverse-proxy:
+    image: nginx:1.20.1
+    container_name: reverse-proxy
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"  # Exponer el proxy inverso
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - todo-app
+
+networks:
+  todo-app:
+    driver: bridge
+

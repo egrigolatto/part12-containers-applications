@@ -12,3 +12,12 @@ services:
     container_name: hello-front-dev # Esto nombrará el contenedor como hello-front-dev
   # debug-helper:
   #   image: busybox
+  nginx:
+    image: nginx:1.20.1
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8080:80
+    container_name: reverse-proxy-frontend
+    depends_on:
+      - app # esperar a que el contenedor frontend arranque
