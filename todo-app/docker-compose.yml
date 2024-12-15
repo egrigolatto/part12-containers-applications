@@ -1,0 +1,62 @@
+services:
+  frontend:
+    build:
+      context: ./todo-frontend  # Carpeta donde se encuentra el frontend
+      dockerfile: Dockerfile   # Archivo Dockerfile para construir el frontend
+    container_name: todo-frontend
+    environment:
+      VITE_API_URL: "http://reverse-proxy/api"  # URL del backend accesible desde el frontend
+    networks:
+      - todo-app
+
+  backend:
+    build:
+      context: ./todo-backend  # Carpeta donde se encuentra el backend
+      dockerfile: Dockerfile   # Archivo Dockerfile para construir el backend
+    container_name: todo-backend
+    environment:
+      MONGO_URI: "mongodb://root:example@mongo:27017/the_database"  # Conexión a MongoDB
+      REDIS_URI: "redis://redis:6379"  # Conexión a Redis
+    depends_on:
+      - mongo
+      - redis  # Asegura que los servicios de Mongo y Redis se inicien antes
+    networks:
+      - todo-app
+
+  mongo:
+    image: mongo:latest  # Última versión de MongoDB
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./todo-backend/mongo_data:/data/db  # Persistencia de datos para MongoDB
+    networks:
+      - todo-app
+
+  redis:
+    image: redis:latest  # Última versión de Redis
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]  # Configuración para persistencia de Redis
+    volumes:
+      - ./todo-backend/redis_data:/data  # Persistencia de datos para Redis
+    networks:
+      - todo-app
+
+  reverse-proxy:
+    image: nginx:1.25-alpine  # Imagen ligera de Nginx
+    container_name: reverse-proxy
+    ports:
+      - "8080:80"  # Mapea el puerto 8080 en el host al puerto 80 en el contenedor
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro  # Monta el archivo nginx.conf como solo lectura
+    depends_on:
+      - frontend
+      - backend  # Asegura que frontend y backend se inicien antes
+    networks:
+      - todo-app
+
+networks:
+  todo-app:
+    driver: bridge  # Configuración de red tipo puente
+

@@ -1,4 +1,14 @@
-.dockerignore
-.gitignore
+# Ignorar dependencias locales
 node_modules
-Dockerfile
+npm-debug.log
+
+# Ignorar archivos de configuración sensibles
+# .env
+
+# Ignorar directorios y archivos específicos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos del sistema de control de versiones
+.git
+.gitignore
